@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amba Kas – Catatan Keuangan Usaha Mahasiswa</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF3F1;--card:#fff;--ink:#12302E;--mute:#5F7773;--line:#D5E0DC;--in:#0E7C66;--out:#C2410C;--warn:#B7791F;--warnbg:#FBF1DC;--accent:#12302E}
+@media (prefers-color-scheme:dark){:root{--bg:#0D1A19;--card:#14262A;--ink:#E6F0EE;--mute:#8FA9A4;--line:#25403F;--in:#4FD1B0;--out:#F08A5D;--warn:#F2C260;--warnbg:#2E2713;--accent:#E6F0EE}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,sans-serif;line-height:1.5}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:2rem;font-weight:800;margin:0}
+.sub{color:var(--mute);margin:4px 0 24px}
+.saldo{background:var(--accent);color:var(--bg);border-radius:16px;padding:24px;margin-bottom:16px}
+.saldo small{opacity:.75}
+.saldo .big{font-size:2.6rem;font-weight:800;line-height:1.1}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat small{color:var(--mute);display:block}
+.stat b{font-size:1.15rem}
+.grid{display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+h2{font-size:1.05rem;margin:0 0 12px}
+label{display:block;font-size:.85rem;color:var(--mute);margin:10px 0 4px}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--in);outline-offset:1px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button{padding:9px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;font:inherit;cursor:pointer}
+.seg button.on.in{background:var(--in);color:#fff;border-color:var(--in)}
+.seg button.on.out{background:var(--out);color:#fff;border-color:var(--out)}
+.btn{width:100%;margin-top:16px;padding:11px;background:var(--accent);color:var(--bg);border:0;border-radius:6px;font:inherit;font-weight:600;cursor:pointer}
+.btn.small{width:auto;margin:0;padding:5px 10px;font-size:.82rem}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.row:last-child{border:0}
+.row .t{font-weight:600}.row .m{color:var(--mute);font-size:.85rem}
+.in-v{color:var(--in);font-weight:600}.out-v{color:var(--out);font-weight:600}
+.piutang{background:var(--warnbg);border:1px solid var(--warn);border-radius:10px;padding:14px;margin-bottom:16px}
+.piutang h2{color:var(--warn)}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.empty{color:var(--mute);padding:12px 0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+#wa{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AmbaKas</h1>
+  <p class="sub">Catat untung-rugi usaha kuliahmu: PO makanan, jastip, thrift, atau kas organisasi, termasuk teman yang belum bayar.</p>
+
+  <div class="saldo"><small>Saldo kas</small><div class="big" id="saldo">Rp0</div></div>
+  <div class="stats">
+    <div class="stat"><small>Pemasukan</small><b id="sIn" class="in-v">Rp0</b></div>
+    <div class="stat"><small>Pengeluaran</small><b id="sOut" class="out-v">Rp0</b></div>
+    <div class="stat"><small>Belum dibayar teman</small><b id="sDebt">Rp0</b></div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Catat transaksi</h2>
+      <div class="seg">
+        <button type="button" id="bIn" class="on in">Pemasukan</button>
+        <button type="button" id="bOut" class="out">Pengeluaran</button>
+      </div>
+      <label for="ket">Keterangan</label>
+      <input id="ket" placeholder="Contoh: PO brownies 10 box">
+      <label for="jml">Jumlah (Rp)</label>
+      <input id="jml" type="number" min="0" inputmode="numeric" placeholder="150000">
+      <label for="kat">Kategori</label>
+      <select id="kat"></select>
+      <label for="tgl">Tanggal</label>
+      <input id="tgl" type="date">
+      <div id="debtBox">
+        <label for="stt">Status pembayaran</label>
+        <select id="stt"><option value="lunas">Lunas</option><option value="belum">Belum dibayar (piutang)</option></select>
+        <div id="wa">
+          <label for="nama">Nama pembeli</label>
+          <input id="nama" placeholder="Contoh: Rina">
+          <label for="hp">No. WhatsApp (opsional)</label>
+          <input id="hp" inputmode="tel" placeholder="08123456789">
+        </div>
+      </div>
+      <button class="btn" id="simpan">Simpan transaksi</button>
+    </div>
+
+    <div>
+      <div class="piutang" id="pBox" hidden>
+        <h2>Tagihan teman yang belum lunas</h2>
+        <div id="pList"></div>
+      </div>
+      <div class="panel">
+        <div class="top"><h2>Riwayat transaksi</h2><button class="btn small ghost" id="csv">Unduh CSV</button></div>
+        <div id="list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const KAT={in:['Penjualan','Jasa','Iuran/kas anggota','Lainnya'],out:['Bahan/modal','Ongkir/transport','Promosi','Konsumsi','Lainnya']};
+let tipe='in',data=[];
+const $=id=>document.getElementById(id);
+const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function load(){try{data=JSON.parse(localStorage.getItem('kaskampus')||'[]')}catch(e){data=[]}}
+function save(){try{localStorage.setItem('kaskampus',JSON.stringify(data))}catch(e){}}
+
+function setTipe(t){
+  tipe=t;
+  $('bIn').className=t==='in'?'on in':'';
+  $('bOut').className=t==='out'?'on out':'';
+  $('kat').innerHTML=KAT[t].map(k=>`<option>${k}</option>`).join('');
+  $('debtBox').style.display=t==='in'?'block':'none';
+  $('stt').value='lunas';$('wa').style.display='none';
+}
+$('bIn').onclick=()=>setTipe('in');
+$('bOut').onclick=()=>setTipe('out');
+$('stt').onchange=e=>{$('wa').style.display=e.target.value==='belum'?'block':'none'};
+
+$('simpan').onclick=()=>{
+  const jml=+$('jml').value,ket=$('ket').value.trim();
+  if(!ket||jml<=0){alert('Isi keterangan dan jumlah lebih dari 0.');return}
+  const belum=tipe==='in'&&$('stt').value==='belum';
+  if(belum&&!$('nama').value.trim()){alert('Isi nama pembeli untuk transaksi yang belum dibayar.');return}
+  data.unshift({id:Date.now(),tipe,ket,jml,kat:$('kat').value,tgl:$('tgl').value,
+    belum,nama:belum?$('nama').value.trim():'',hp:belum?$('hp').value.trim():''});
+  save();
+  ['ket','jml','nama','hp'].forEach(i=>$(i).value='');
+  setTipe(tipe);render();
+};
+
+function lunasi(id){const d=data.find(x=>x.id===id);if(d){d.belum=false;save();render()}}
+function hapus(id){if(confirm('Hapus transaksi ini?')){data=data.filter(x=>x.id!==id);save();render()}}
+function tagih(id){
+  const d=data.find(x=>x.id===id);if(!d)return;
+  const msg=`Halo ${d.nama}, aku mau mengingatkan pembayaran "${d.ket}" sebesar ${rp(d.jml)}. Terima kasih ya!`;
+  let hp=d.hp.replace(/\D/g,'');if(hp.startsWith('0'))hp='62'+hp.slice(1);
+  window.open(`https://wa.me/${hp}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+function render(){
+  // piutang belum lunas tidak dihitung sebagai kas masuk
+  const masuk=data.filter(d=>d.tipe==='in'&&!d.belum).reduce((a,d)=>a+d.jml,0);
+  const keluar=data.filter(d=>d.tipe==='out').reduce((a,d)=>a+d.jml,0);
+  const utang=data.filter(d=>d.belum);
+  const totUtang=utang.reduce((a,d)=>a+d.jml,0);
+  $('sIn').textContent=rp(masuk);$('sOut').textContent=rp(keluar);
+  $('sDebt').textContent=rp(totUtang);$('saldo').textContent=rp(masuk-keluar);
+
+  $('pBox').hidden=!utang.length;
+  $('pList').innerHTML=utang.map(d=>`
+    <div class="row"><div><div class="t">${esc(d.nama)}: ${rp(d.jml)}</div><div class="m">${esc(d.ket)}</div></div>
+    <div class="acts">${d.hp?`<button class="btn small ghost" onclick="tagih(${d.id})">Tagih via WA</button>`:''}
+    <button class="btn small" onclick="lunasi(${d.id})">Tandai lunas</button></div></div>`).join('');
+
+  $('list').innerHTML=data.length?data.map(d=>`
+    <div class="row"><div><div class="t">${esc(d.ket)}</div>
+    <div class="m">${esc(d.tgl||'-')} · ${esc(d.kat)}${d.belum?' · belum dibayar':''}</div></div>
+    <div class="acts"><span class="${d.tipe==='in'?'in-v':'out-v'}">${d.tipe==='in'?'+':'-'}${rp(d.jml)}</span>
+    <button class="btn small ghost" onclick="hapus(${d.id})" aria-label="Hapus">Hapus</button></div></div>`).join('')
+    :'<div class="empty">Belum ada transaksi. Catat penjualan pertamamu di formulir.</div>';
+}
+
+$('csv').onclick=()=>{
+  const h='Tanggal,Tipe,Kategori,Keterangan,Jumlah,Status,Nama';
+  const r=data.map(d=>[d.tgl,d.tipe==='in'?'Masuk':'Keluar',d.kat,'"'+d.ket.replace(/"/g,'""')+'"',d.jml,d.belum?'Belum bayar':'Lunas',d.nama].join(','));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([[h,...r].join('\n')],{type:'text/csv'}));
+  a.download='kaskampus.csv';a.click();
+};
+
+$('tgl').value=new Date().toISOString().slice(0,10);
+load();setTipe('in');render();
+</script>
+</body>
+</html>
