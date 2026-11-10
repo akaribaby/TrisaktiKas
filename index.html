@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#12302E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Amba Kas – Catatan Keuangan Usaha Mahasiswa</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -21,8 +24,10 @@ h1{font-size:2rem;font-weight:800;margin:0}
 .stat small{color:var(--mute);display:block}
 .stat b{font-size:1.15rem}
 .grid{display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start}
-@media(max-width:760px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.grid,.g2{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.grid .panel:last-child{margin-bottom:0}
 h2{font-size:1.05rem;margin:0 0 12px}
 label{display:block;font-size:.85rem;color:var(--mute);margin:10px 0 4px}
 input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
@@ -40,10 +45,19 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 .in-v{color:var(--in);font-weight:600}.out-v{color:var(--out);font-weight:600}
 .piutang{background:var(--warnbg);border:1px solid var(--warn);border-radius:10px;padding:14px;margin-bottom:16px}
 .piutang h2{color:var(--warn)}
-.acts{display:flex;gap:6px;flex-wrap:wrap}
+.acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .empty{color:var(--mute);padding:12px 0}
-.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 #wa{display:none}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px}
+.tabs button{flex:none;padding:8px 14px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;font:inherit;cursor:pointer}
+.tabs button.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+[hidden]{display:none!important}
+.big2{font-size:1.6rem;font-weight:800}
+.note{color:var(--mute);font-size:.85rem;margin:8px 0 0}
+.chk{width:auto;margin-right:8px;accent-color:var(--in)}
+.res{background:var(--bg);border-radius:8px;padding:12px;margin-top:12px}
+@media print{body.po .wrap>*:not(#v-org){display:none}body.po .noprint{display:none!important}}
 </style>
 </head>
 <body>
@@ -58,7 +72,16 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
     <div class="stat"><small>Belum dibayar teman</small><b id="sDebt">Rp0</b></div>
   </div>
 
-  <div class="grid">
+  <div class="tabs" role="tablist" id="tabs">
+    <button type="button" data-v="catat" class="on">Catat</button>
+    <button type="button" data-v="lap">Laporan</button>
+    <button type="button" data-v="hpp">Harga pokok</button>
+    <button type="button" data-v="org">Kas organisasi</button>
+    <button type="button" data-v="data">Cadangan data</button>
+  </div>
+
+  <!-- CATAT -->
+  <div class="grid" id="v-catat">
     <div class="panel">
       <h2>Catat transaksi</h2>
       <div class="seg">
@@ -97,18 +120,112 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
       </div>
     </div>
   </div>
+
+  <!-- LAPORAN -->
+  <div id="v-lap" hidden>
+    <div class="panel">
+      <div class="top"><h2>Laporan usaha</h2>
+        <select id="per" style="width:auto"><option value="7">7 hari terakhir</option><option value="30" selected>30 hari terakhir</option><option value="bln">Bulan ini</option><option value="all">Semua</option></select></div>
+      <div class="stats" style="margin:0">
+        <div class="stat"><small>Pemasukan (lunas)</small><b class="in-v" id="lIn">Rp0</b></div>
+        <div class="stat"><small>Pengeluaran</small><b class="out-v" id="lOut">Rp0</b></div>
+        <div class="stat"><small>Untung / rugi</small><b id="lNet">Rp0</b></div>
+      </div>
+      <p class="note" id="lDebt"></p>
+    </div>
+    <div class="panel"><h2>Tren pemasukan vs pengeluaran</h2><div id="chart"></div>
+      <p class="note"><span class="in-v">■</span> Pemasukan &nbsp; <span class="out-v">■</span> Pengeluaran</p></div>
+    <div class="g2">
+      <div class="panel"><h2>Produk terlaris</h2><div id="lTop"></div></div>
+      <div class="panel"><h2>Pengeluaran terbesar</h2><div id="lExp"></div></div>
+    </div>
+  </div>
+
+  <!-- HPP -->
+  <div id="v-hpp" hidden>
+    <div class="g2">
+      <div class="panel">
+        <h2>Hitung harga pokok (HPP)</h2>
+        <label for="hNama">Nama produk</label><input id="hNama" placeholder="Brownies 1 box">
+        <label for="hBahan">Total modal bahan sekali produksi (Rp)</label><input id="hBahan" type="number" min="0" inputmode="numeric" placeholder="120000">
+        <label for="hQty">Jumlah produk jadi</label><input id="hQty" type="number" min="1" inputmode="numeric" placeholder="10">
+        <label for="hPak">Kemasan + biaya lain per produk (Rp)</label><input id="hPak" type="number" min="0" inputmode="numeric" placeholder="2000">
+        <label for="hTetap">Biaya tetap (sewa alat, promosi, dll) (Rp)</label><input id="hTetap" type="number" min="0" inputmode="numeric" placeholder="50000">
+        <label for="hMar">Target margin (% dari harga jual)</label><input id="hMar" type="number" min="0" max="95" value="30">
+        <label for="hHarga">Harga jual pilihanmu (kosongkan untuk pakai saran)</label><input id="hHarga" type="number" min="0" inputmode="numeric">
+      </div>
+      <div class="panel">
+        <h2>Hasil</h2>
+        <div id="hRes" class="empty">Isi modal bahan dan jumlah produk jadi.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORGANISASI -->
+  <div id="v-org" hidden>
+    <div class="panel">
+      <h2 id="oTitle">Kas organisasi</h2>
+      <div class="g2 noprint">
+        <div><label for="oNama">Nama organisasi</label><input id="oNama" placeholder="HIMA / UKM / Panitia"></div>
+        <div><label for="oIuran">Iuran per anggota (Rp)</label><input id="oIuran" type="number" min="0" inputmode="numeric"></div>
+        <div><label for="oPer">Periode</label><input id="oPer" type="month"></div>
+        <div><label for="oMem">Tambah anggota</label>
+          <div class="acts" style="flex-wrap:nowrap"><input id="oMem" placeholder="Nama anggota"><button type="button" class="btn small" id="oAdd">Tambah</button></div></div>
+      </div>
+      <p class="note">Mencentang "sudah bayar" otomatis mencatat pemasukan "Iuran/kas anggota" di saldo; membatalkan centang menghapusnya.</p>
+      <div class="res" id="oSum"></div>
+      <div id="oList" style="margin-top:8px"></div>
+      <div class="acts noprint" style="margin-top:16px">
+        <button type="button" class="btn small" id="oImg">Unduh sebagai gambar</button>
+        <button type="button" class="btn small ghost" id="oPdf">Cetak / simpan PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA -->
+  <div id="v-data" hidden>
+    <div class="g2">
+      <div class="panel">
+        <h2>Cadangan &amp; pulihkan</h2>
+        <p class="note">Data hanya tersimpan di browser ini. Unduh cadangan secara berkala, lalu pulihkan di HP atau browser baru.</p>
+        <button class="btn" id="bkp">Unduh cadangan (.json)</button>
+        <label for="rst" style="margin-top:16px">Pulihkan dari cadangan (.json)</label>
+        <input id="rst" type="file" accept=".json,application/json">
+      </div>
+      <div class="panel">
+        <h2>Impor CSV</h2>
+        <p class="note">Gunakan file hasil "Unduh CSV" dari aplikasi ini. Kolom: Tanggal, Tipe, Kategori, Keterangan, Jumlah, Status, Nama, HP. Transaksi yang sudah ada tidak digandakan.</p>
+        <label for="imp">Pilih file CSV</label>
+        <input id="imp" type="file" accept=".csv,text/csv">
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 const KAT={in:['Penjualan','Jasa','Iuran/kas anggota','Lainnya'],out:['Bahan/modal','Ongkir/transport','Promosi','Konsumsi','Lainnya']};
-let tipe='in',data=[];
+let tipe='in',data=[],org={nama:'',iuran:0,members:[]};
 const $=id=>document.getElementById(id);
 const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
 
-function load(){try{data=JSON.parse(localStorage.getItem('kaskampus')||'[]')}catch(e){data=[]}}
-function save(){try{localStorage.setItem('kaskampus',JSON.stringify(data))}catch(e){}}
+function load(){
+  try{data=JSON.parse(localStorage.getItem('kaskampus')||'[]')}catch(e){data=[]}
+  try{org=Object.assign({nama:'',iuran:0,members:[]},JSON.parse(localStorage.getItem('kaskampus_org')||'{}'))}catch(e){}
+}
+function save(){try{localStorage.setItem('kaskampus',JSON.stringify(data));localStorage.setItem('kaskampus_org',JSON.stringify(org))}catch(e){}}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
+/* ---------- Tab ---------- */
+$('tabs').onclick=e=>{
+  const v=e.target.dataset&&e.target.dataset.v;if(!v)return;
+  [...$('tabs').children].forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  ['catat','lap','hpp','org','data'].forEach(x=>$('v-'+x).hidden=x!==v);
+  render();
+};
+
+/* ---------- Catat ---------- */
 function setTipe(t){
   tipe=t;
   $('bIn').className=t==='in'?'on in':'';
@@ -142,8 +259,180 @@ function tagih(id){
   window.open(`https://wa.me/${hp}?text=${encodeURIComponent(msg)}`,'_blank');
 }
 
+/* ---------- Laporan ---------- */
+function periodRows(){
+  const p=$('per').value,n=new Date();let c='';
+  if(p==='7'||p==='30'){const d=new Date(n);d.setDate(d.getDate()-(+p-1));c=d.toISOString().slice(0,10)}
+  else if(p==='bln')c=today().slice(0,7)+'-01';
+  return data.filter(d=>!c||(d.tgl&&d.tgl>=c));
+}
+function topList(map,cls){
+  const a=[...map.entries()].sort((x,y)=>y[1].v-x[1].v).slice(0,3);
+  return a.length?a.map(([k,o],i)=>`<div class="row"><div><div class="t">${i+1}. ${esc(o.label)}</div><div class="m">${o.n}x transaksi</div></div><span class="${cls}">${rp(o.v)}</span></div>`).join(''):'<div class="empty">Belum ada data.</div>';
+}
+function group(rows,fn){
+  const m=new Map();
+  rows.forEach(d=>{const k=fn(d).toLowerCase().trim();const o=m.get(k)||{label:fn(d).trim(),v:0,n:0};o.v+=d.jml;o.n++;m.set(k,o)});
+  return m;
+}
+function renderLap(){
+  const r=periodRows(),all=$('per').value==='all';
+  const mi=r.filter(d=>d.tipe==='in'&&!d.belum).reduce((a,d)=>a+d.jml,0);
+  const ko=r.filter(d=>d.tipe==='out').reduce((a,d)=>a+d.jml,0),net=mi-ko;
+  $('lIn').textContent=rp(mi);$('lOut').textContent=rp(ko);
+  $('lNet').textContent=(net<0?'-':'')+rp(Math.abs(net));
+  $('lNet').className=net>=0?'in-v':'out-v';
+  const pu=r.filter(d=>d.belum).reduce((a,d)=>a+d.jml,0);
+  $('lDebt').textContent=pu?`Ada ${rp(pu)} yang belum dibayar teman pada periode ini (belum dihitung sebagai pemasukan).`:'';
+  $('lTop').innerHTML=topList(group(r.filter(d=>d.tipe==='in'&&d.kat!=='Iuran/kas anggota'),d=>d.ket),'in-v');
+  $('lExp').innerHTML=topList(group(r.filter(d=>d.tipe==='out'),d=>d.kat),'out-v');
+  // chart
+  const by={};
+  r.filter(d=>d.tgl&&!(d.tipe==='in'&&d.belum)).forEach(d=>{
+    const k=all?d.tgl.slice(0,7):d.tgl;by[k]=by[k]||{i:0,o:0};by[k][d.tipe==='in'?'i':'o']+=d.jml});
+  const keys=Object.keys(by).sort().slice(-14);
+  if(!keys.length){$('chart').innerHTML='<div class="empty">Belum ada data bertanggal pada periode ini.</div>';return}
+  const mx=Math.max(...keys.map(k=>Math.max(by[k].i,by[k].o)))||1,W=600,H=170,gw=W/keys.length,bw=Math.min(22,gw*.34);
+  let s=`<svg viewBox="0 0 ${W} ${H+24}" width="100%" role="img" aria-label="Grafik pemasukan dan pengeluaran">`;
+  keys.forEach((k,i)=>{
+    const x=i*gw+gw/2,hi=by[k].i/mx*H,ho=by[k].o/mx*H;
+    s+=`<rect x="${x-bw-1}" y="${H-hi}" width="${bw}" height="${hi}" rx="2" style="fill:var(--in)"><title>${k} masuk ${rp(by[k].i)}</title></rect>`;
+    s+=`<rect x="${x+1}" y="${H-ho}" width="${bw}" height="${ho}" rx="2" style="fill:var(--out)"><title>${k} keluar ${rp(by[k].o)}</title></rect>`;
+    s+=`<text x="${x}" y="${H+16}" text-anchor="middle" font-size="11" style="fill:var(--mute)">${all?k.slice(2):k.slice(5)}</text>`;
+  });
+  $('chart').innerHTML=s+`<line x1="0" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--line)"/></svg>`;
+}
+$('per').onchange=renderLap;
+
+/* ---------- HPP ---------- */
+function renderHpp(){
+  const b=+$('hBahan').value,q=+$('hQty').value,p=+$('hPak').value||0,t=+$('hTetap').value||0,m=Math.min(+$('hMar').value||0,95)/100;
+  if(!(b>=0)||!(q>0)||!$('hBahan').value){$('hRes').className='empty';$('hRes').textContent='Isi modal bahan dan jumlah produk jadi.';return}
+  const hpp=b/q+p,saran=Math.ceil(hpp/(1-m)/500)*500,harga=+$('hHarga').value||saran,unit=harga-hpp;
+  const bep=unit>0?Math.ceil(t/unit):null,mar=harga>0?unit/harga*100:0;
+  $('hRes').className='';
+  $('hRes').innerHTML=`
+   <div class="row"><span>HPP per produk</span><b>${rp(hpp)}</b></div>
+   <div class="row"><span>Saran harga jual (margin ${Math.round(m*100)}%)</span><b class="in-v">${rp(saran)}</b></div>
+   <div class="row"><span>Harga yang dipakai</span><b>${rp(harga)}</b></div>
+   <div class="row"><span>Laba per produk</span><b class="${unit>=0?'in-v':'out-v'}">${rp(unit)} (${mar.toFixed(1)}%)</b></div>
+   <div class="row"><span>Laba jika ${q} produk habis</span><b class="${unit>=0?'in-v':'out-v'}">${rp(unit*q-t)}</b></div>
+   <div class="row"><span>Titik impas (break-even)</span><b>${unit<=0?'Harga di bawah HPP':t?bep+' produk':'Langsung untung'}</b></div>
+   ${unit<0?'<p class="note out-v">Harga jual lebih rendah dari HPP, kamu rugi di setiap penjualan.</p>':''}`;
+}
+['hBahan','hQty','hPak','hTetap','hMar','hHarga'].forEach(i=>$(i).oninput=renderHpp);
+
+/* ---------- Kas organisasi ---------- */
+const bulan=p=>{if(!p)return'';const[y,m]=p.split('-');return['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][+m-1]+' '+y};
+const paid=(mid,per)=>data.find(d=>d.mid===mid&&d.per===per);
+$('oNama').onchange=e=>{org.nama=e.target.value.trim();save();renderOrg()};
+$('oIuran').onchange=e=>{org.iuran=Math.max(0,+e.target.value||0);save();renderOrg()};
+$('oPer').onchange=renderOrg;
+$('oAdd').onclick=()=>{const n=$('oMem').value.trim();if(!n)return;org.members.push({id:Date.now(),nama:n});$('oMem').value='';save();renderOrg()};
+function togglePaid(mid,on){
+  const per=$('oPer').value,m=org.members.find(x=>x.id===mid);if(!m||!per)return;
+  if(on){
+    if(!org.iuran){alert('Isi nominal iuran dulu.');renderOrg();return}
+    data.unshift({id:Date.now(),tipe:'in',ket:`Iuran ${m.nama} ${bulan(per)}`,jml:org.iuran,kat:'Iuran/kas anggota',tgl:today(),belum:false,nama:'',hp:'',mid,per});
+  }else data=data.filter(d=>!(d.mid===mid&&d.per===per));
+  save();render();
+}
+function delMember(id){if(confirm('Hapus anggota dari daftar? Catatan iuran lama tetap ada.')){org.members=org.members.filter(m=>m.id!==id);save();renderOrg()}}
+function orgStats(){
+  const per=$('oPer').value,sudah=org.members.filter(m=>paid(m.id,per));
+  return{per,sudah,belum:org.members.filter(m=>!paid(m.id,per)),kum:sudah.length*org.iuran,target:org.members.length*org.iuran};
+}
+function renderOrg(){
+  if(document.activeElement!==$('oNama'))$('oNama').value=org.nama;
+  if(document.activeElement!==$('oIuran'))$('oIuran').value=org.iuran||'';
+  if(!$('oPer').value)$('oPer').value=today().slice(0,7);
+  const s=orgStats();
+  $('oTitle').textContent='Kas '+(org.nama||'organisasi')+(s.per?' · '+bulan(s.per):'');
+  $('oSum').innerHTML=`Terkumpul <b class="in-v">${rp(s.kum)}</b> dari target <b>${rp(s.target)}</b> · ${s.sudah.length} sudah bayar, <b class="out-v">${s.belum.length} belum</b>`;
+  $('oList').innerHTML=org.members.length?org.members.map(m=>`
+    <div class="row"><label style="margin:0;display:flex;align-items:center;color:var(--ink);font-size:1rem"><input type="checkbox" class="chk" ${paid(m.id,s.per)?'checked':''} onchange="togglePaid(${m.id},this.checked)">${esc(m.nama)}</label>
+    <span class="acts"><span class="${paid(m.id,s.per)?'in-v':'out-v'}">${paid(m.id,s.per)?'Lunas':'Belum'}</span><button class="btn small ghost noprint" onclick="delMember(${m.id})" aria-label="Hapus anggota">Hapus</button></span></div>`).join('')
+    :'<div class="empty">Belum ada anggota. Tambahkan di atas.</div>';
+}
+$('oPdf').onclick=()=>{document.body.classList.add('po');window.print()};
+window.addEventListener('afterprint',()=>document.body.classList.remove('po'));
+$('oImg').onclick=()=>{
+  const s=orgStats(),W=720,rows=org.members.length,H=210+rows*34+60,c=document.createElement('canvas'),k=2;
+  c.width=W*k;c.height=H*k;const g=c.getContext('2d');g.scale(k,k);
+  const F='system-ui,Arial,sans-serif';
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  g.fillStyle='#12302E';g.fillRect(0,0,W,90);
+  g.fillStyle='#fff';g.font='800 24px '+F;g.fillText('Laporan Kas '+(org.nama||'Organisasi'),28,42);
+  g.font='15px '+F;g.fillText('Periode '+bulan(s.per)+' · Iuran '+rp(org.iuran)+'/anggota',28,68);
+  g.fillStyle='#12302E';g.font='600 16px '+F;
+  g.fillText('Terkumpul: '+rp(s.kum)+' dari '+rp(s.target),28,130);
+  g.fillText(s.sudah.length+' sudah bayar · '+s.belum.length+' belum bayar',28,156);
+  g.strokeStyle='#D5E0DC';
+  org.members.forEach((m,i)=>{
+    const y=190+i*34,ok=!!paid(m.id,s.per);
+    g.beginPath();g.moveTo(28,y+8);g.lineTo(W-28,y+8);g.stroke();
+    g.fillStyle='#12302E';g.font='15px '+F;g.fillText(m.nama,28,y+28);
+    g.fillStyle=ok?'#0E7C66':'#C2410C';g.font='600 15px '+F;g.textAlign='right';g.fillText(ok?'Lunas':'Belum',W-28,y+28);g.textAlign='left';
+  });
+  g.fillStyle='#5F7773';g.font='12px '+F;g.fillText('Dibuat dengan AmbaKas · '+today(),28,H-18);
+  c.toBlob(b=>download(b,'laporan-kas-'+(s.per||'organisasi')+'.png'));
+};
+
+/* ---------- Cadangan & CSV ---------- */
+const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+$('csv').onclick=()=>{
+  const h='Tanggal,Tipe,Kategori,Keterangan,Jumlah,Status,Nama,HP';
+  const r=data.map(d=>[q(d.tgl),d.tipe==='in'?'Masuk':'Keluar',q(d.kat),q(d.ket),d.jml,d.belum?'Belum bayar':'Lunas',q(d.nama),q(d.hp)].join(','));
+  download(new Blob([[h,...r].join('\n')],{type:'text/csv'}),'kaskampus.csv');
+};
+$('bkp').onclick=()=>download(new Blob([JSON.stringify({app:'ambakas',v:2,tgl:today(),data,org},null,1)],{type:'application/json'}),'ambakas-cadangan-'+today()+'.json');
+$('rst').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{
+    const j=JSON.parse(t),arr=Array.isArray(j)?j:j.data;
+    if(!Array.isArray(arr))throw 0;
+    const ids=new Set(data.map(d=>d.id));let n=0;
+    arr.forEach(d=>{if(d&&d.id&&d.ket&&d.jml>0&&(d.tipe==='in'||d.tipe==='out')&&!ids.has(d.id)){data.push(d);ids.add(d.id);n++}});
+    data.sort((a,b)=>b.id-a.id);
+    if(j.org&&Array.isArray(j.org.members)){
+      const mi=new Set(org.members.map(m=>m.id));j.org.members.forEach(m=>{if(m.id&&m.nama&&!mi.has(m.id))org.members.push(m)});
+      if(!org.iuran)org.iuran=+j.org.iuran||0;if(!org.nama)org.nama=j.org.nama||'';
+    }
+    save();render();alert(n+' transaksi dipulihkan (yang sudah ada dilewati).');
+  }).catch(()=>alert('File cadangan tidak valid.'));
+  e.target.value='';
+};
+function parseCSV(t){
+  const rows=[];let r=[],c='',inq=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(inq){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else inq=false}else c+=ch}
+    else if(ch==='"')inq=true;
+    else if(ch===','){r.push(c);c=''}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);c='';if(r.some(x=>x!==''))rows.push(r);r=[]}
+    else c+=ch}
+  r.push(c);if(r.some(x=>x!==''))rows.push(r);return rows;
+}
+$('imp').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{
+    const rows=parseCSV(t.replace(/^\uFEFF/,'')).slice(1);
+    const key=d=>[d.tgl,d.tipe,d.ket,d.jml].join('|'),have=new Set(data.map(key));let n=0,skip=0;
+    rows.forEach((c,i)=>{
+      const tipe=/^masuk$/i.test((c[1]||'').trim())?'in':/^keluar$/i.test((c[1]||'').trim())?'out':null,jml=+c[4];
+      if(!tipe||!(jml>0)||!(c[3]||'').trim()){skip++;return}
+      const belum=tipe==='in'&&/belum/i.test(c[5]||'');
+      const d={id:Date.now()+i,tipe,ket:c[3].trim(),jml,kat:c[2]||'Lainnya',tgl:c[0]||'',belum,nama:belum?(c[6]||''):'',hp:belum?(c[7]||''):''};
+      if(have.has(key(d))){skip++;return}
+      have.add(key(d));data.push(d);n++;
+    });
+    data.sort((a,b)=>b.id-a.id);save();render();
+    alert(n+' transaksi diimpor, '+skip+' dilewati (duplikat atau tidak valid).');
+  }).catch(()=>alert('File CSV tidak bisa dibaca.'));
+  e.target.value='';
+};
+
+/* ---------- Render ---------- */
 function render(){
-  // piutang belum lunas tidak dihitung sebagai kas masuk
   const masuk=data.filter(d=>d.tipe==='in'&&!d.belum).reduce((a,d)=>a+d.jml,0);
   const keluar=data.filter(d=>d.tipe==='out').reduce((a,d)=>a+d.jml,0);
   const utang=data.filter(d=>d.belum);
@@ -163,18 +452,15 @@ function render(){
     <div class="acts"><span class="${d.tipe==='in'?'in-v':'out-v'}">${d.tipe==='in'?'+':'-'}${rp(d.jml)}</span>
     <button class="btn small ghost" onclick="hapus(${d.id})" aria-label="Hapus">Hapus</button></div></div>`).join('')
     :'<div class="empty">Belum ada transaksi. Catat penjualan pertamamu di formulir.</div>';
+  renderLap();renderOrg();
 }
 
-$('csv').onclick=()=>{
-  const h='Tanggal,Tipe,Kategori,Keterangan,Jumlah,Status,Nama';
-  const r=data.map(d=>[d.tgl,d.tipe==='in'?'Masuk':'Keluar',d.kat,'"'+d.ket.replace(/"/g,'""')+'"',d.jml,d.belum?'Belum bayar':'Lunas',d.nama].join(','));
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([[h,...r].join('\n')],{type:'text/csv'}));
-  a.download='kaskampus.csv';a.click();
-};
+$('tgl').value=today();
+load();setTipe('in');render();renderHpp();
 
-$('tgl').value=new Date().toISOString().slice(0,10);
-load();setTipe('in');render();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 </script>
 </body>
 </html>
